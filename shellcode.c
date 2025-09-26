@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <windows.h>
 
+// we gonna access the function called Beep from
+// kernel32.dll and execute it 
+
 inline __attribute__((always_inline)) int  ft_strcmp(char *str,char *ptr)
 {
     int i = 0;
@@ -36,7 +39,18 @@ inline __attribute__((always_inline)) void*  Lgetprocadd(HMODULE base_p, char* n
         i++;
     }
 }
+
+inline __attribute__((always_inline)) void *ft_LoadLib(const char *name)
+{
+    void *peb;
+    __asm__ (
+        "movl %%fs:0x30, %%eax"
+        : "=r"(peb)   // output
+    );
+    return peb;
+}
 int main()
 {
+    ft_LoadLib("ff\n");
     Lgetprocadd(LoadLibraryA("C:\\Windows\\System32\\kernel32.dll"), "Beep");
 }
