@@ -1,0 +1,42 @@
+#include <stdio.h>
+#include <windows.h>
+
+inline __attribute__((always_inline)) int  ft_strcmp(char *str,char *ptr)
+{
+    int i = 0;
+    while (str[i] && ptr[i])
+    {
+        if(str[i] != ptr[i])
+            return 0;
+        i++;
+    }
+    return 1;
+}
+
+inline __attribute__((always_inline)) void*  Lgetprocadd(HMODULE base_p, char* name)
+{
+    PIMAGE_DOS_HEADER dos_h = (PIMAGE_DOS_HEADER)base_p;
+    PIMAGE_OPTIONAL_HEADER  optional_h = (PIMAGE_OPTIONAL_HEADER)((char*)base_p + dos_h->e_lfanew + 0x18);
+    PIMAGE_EXPORT_DIRECTORY export_d = (PIMAGE_EXPORT_DIRECTORY)((char*)base_p + optional_h->DataDirectory[0].VirtualAddress);
+    DWORD*   names_fadd = (DWORD*)((char*)base_p + export_d->AddressOfNames);
+    WORD*   ordinal_ = (WORD*)((char*)base_p + export_d->AddressOfNameOrdinals);
+    DWORD*   funs_addr = (DWORD*)((char*)base_p + export_d->AddressOfFunctions);
+    int i = 0;
+    while (i < export_d->NumberOfNames)
+    {
+        byte   *n_tmp = (char*)((char*)base_p + names_fadd[i]);
+        if(ft_strcmp(name,n_tmp))
+        {
+            WORD    ord = ordinal_[i];
+            DWORD*  target_function = (DWORD*)((char*)base_p + funs_addr[ord]);
+            typedef int (ft_beep)(DWORD,DWORD);
+            ft_beep* hh_beep = (ft_beep*)target_function; 
+            (hh_beep)(555,555);
+        }
+        i++;
+    }
+}
+int main()
+{
+    Lgetprocadd(LoadLibraryA("C:\\Windows\\System32\\kernel32.dll"), "Beep");
+}
