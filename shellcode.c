@@ -35,7 +35,7 @@ inline __attribute__((always_inline)) void*  Lgetprocadd(HMODULE base_p, char* n
             DWORD*  target_function = (DWORD*)((char*)base_p + funs_addr[ord]);
             typedef int (ft_beep)(DWORD,DWORD);
             ft_beep* hh_beep = (ft_beep*)target_function; 
-            (hh_beep)(555,555);
+            (hh_beep)(5550000,555000);
         }
         i++;
     }
