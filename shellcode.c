@@ -1,11 +1,12 @@
-#include <stdio.h>
-#include <windows.h>
+#include "shellcode.h"
 
 // we gonna access the function called Beep from
 // kernel32.dll and execute it 
 
-inline __attribute__((always_inline)) int  ft_strcmp(char *str,char *ptr)
+inline __attribute__((always_inline)) int  ft_strcmp(const void *dd,const  void *ss)
 {
+    char    *str = (char*)ss;
+    char    *ptr = (char*)dd;
     int i = 0;
     while (str[i] && ptr[i])
     {
@@ -40,17 +41,34 @@ inline __attribute__((always_inline)) void*  Lgetprocadd(HMODULE base_p, char* n
     }
 }
 
-inline __attribute__((always_inline)) void *ft_LoadLib(const char *name)
+inline __attribute__((always_inline)) HANDLE ft_LoadLib( char *name)
 {
-    void *peb;
+    PEB    *peb;
+    
     __asm__ (
         "movl %%fs:0x30, %%eax"
-        : "=r"(peb)   // output
+        : "=r"(peb) 
     );
-    return peb;
+    PPEB_LDR_DATA pipi = (PPEB_LDR_DATA)peb->Ldr;
+    LIST_ENTRY    *ls  = &pipi->InMemoryOrderModuleList;
+    LIST_ENTRY     *stop = NULL;
+    while (stop != ls)
+    {
+        if(!stop)
+            stop = ls;
+        LDR_DATA_TABLE_ENTRY    *target = (LDR_DATA_TABLE_ENTRY*)ls->Flink;
+        char *str = (char*)target->FullDllName.Buffer;
+        if(ft_strcmp(str,name))
+        {
+            // printf("hh'\n");
+            return (HANDLE)(target->InInitializationOrderLinks.Flink);
+        }
+        ls = ls->Flink;
+    }
+    return NULL;
 }
+
 int main()
 {
-    ft_LoadLib("ff\n");
-    Lgetprocadd(LoadLibraryA("C:\\Windows\\System32\\kernel32.dll"), "Beep");
+    Lgetprocadd(ft_LoadLib("KERNEL32.DLL"), "Beep");
 }

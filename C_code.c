@@ -1,5 +1,6 @@
 #include <windows.h>
-#include <winternl.h>
+#include "shellcode.h"
+// #include <winternl.h>
 #include <stdio.h>
 
 int main()
