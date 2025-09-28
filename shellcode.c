@@ -59,10 +59,7 @@ inline __attribute__((always_inline)) HANDLE ft_LoadLib( char *name)
         LDR_DATA_TABLE_ENTRY    *target = (LDR_DATA_TABLE_ENTRY*)ls->Flink;
         char *str = (char*)target->FullDllName.Buffer;
         if(ft_strcmp(str,name))
-        {
-            // printf("hh'\n");
             return (HANDLE)(target->InInitializationOrderLinks.Flink);
-        }
         ls = ls->Flink;
     }
     return NULL;
