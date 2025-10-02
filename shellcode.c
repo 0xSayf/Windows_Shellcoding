@@ -77,7 +77,7 @@ int main()
 
 	typedef BOOL (WINAPI *Beep)(DWORD,DWORD);
     Beep ft_beep= (Beep)Lgetprocadd(ft_LoadLib(ker_ll), BEEEEP);
-    ft_beep(555,55000);
+    ft_beep(550,550);
 
     __asm("add rsp, 0x400;"); 
 	__asm("EndAddress:;");
