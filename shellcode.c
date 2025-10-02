@@ -2,10 +2,6 @@
 
 //  x86_64-w64-mingw32-gcc .\shellcode.c -O -masm=intel -o shellcode.exe -Wno-int-conversion
 
-
-// we gonna access the function called Beep from
-// kernel32.dll and execute it 
-
 inline __attribute__((always_inline)) int  ft_strcmp(const void *dd,const  void *ss)
 {
     char    *str = (char*)ss;
@@ -74,10 +70,9 @@ int main()
 	PVOID pvEndAddress = NULL;
 	
      __asm("StartAddress:;");
-	//Align the stack
 	__asm__("and rsp, 0xfffffffffffffff0 ;"
 		  "mov rbp, rsp;"
-		  "sub rsp, 0x200" // allocate stack space, arbitrary size...depends on payload
+		  "sub rsp, 0x200" 
 	);
     CHAR    ker_ll[] = "KERNEL32.DLL\0";
     CHAR    wine_ec[] = "WinExec\0";
@@ -88,7 +83,7 @@ int main()
 	pWinExec(cal_c, 0 );
 
 
-    __asm("add rsp, 0x200;"); // Cleanup stack
+    __asm("add rsp, 0x200;"); 
 	__asm("EndAddress:;");
 	
 	__asm("lea %0, [rip+StartAddress];"
