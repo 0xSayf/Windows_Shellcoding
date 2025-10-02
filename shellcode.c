@@ -33,9 +33,7 @@ inline __attribute__((always_inline)) void*  Lgetprocadd(HMODULE base_p, char* n
         {
             WORD    ord = ordinal_[i];
             DWORD*  target_function = (DWORD*)((char*)base_p + funs_addr[ord]);
-            typedef int (ft_beep)(DWORD,DWORD);
-            ft_beep* hh_beep = (ft_beep*)target_function; 
-            (hh_beep)(5550000,555000);
+            return target_function;
         }
         i++;
     }
@@ -45,9 +43,9 @@ inline __attribute__((always_inline)) HANDLE ft_LoadLib( char *name)
 {
     PEB    *peb;
     
-    __asm__ (
-        "movl %%fs:0x30, %%eax"
-        : "=r"(peb) 
+   __asm__ (
+    "mov eax, fs:[0x30];"
+    : "=r"(peb)
     );
     PPEB_LDR_DATA pipi = (PPEB_LDR_DATA)peb->Ldr;
     LIST_ENTRY    *ls  = &pipi->InMemoryOrderModuleList;
@@ -65,7 +63,12 @@ inline __attribute__((always_inline)) HANDLE ft_LoadLib( char *name)
     return NULL;
 }
 
+typedef UINT(WINAPI *WinExec_t)(LPCSTR lpCmdLine, UINT uCmdShow);
+
+
 int main()
 {
-    Lgetprocadd(ft_LoadLib("KERNEL32.DLL"), "Beep");
+    
+    WinExec_t pWinExec = (WinExec_t) Lgetprocadd(ft_LoadLib("KERNEL32.DLL"), "WinExec");;
+	pWinExec("calc", 0 );
 }
