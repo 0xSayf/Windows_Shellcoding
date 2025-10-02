@@ -62,28 +62,24 @@ inline __attribute__((always_inline)) HANDLE ft_LoadLib( char *name)
     return NULL;
 }
 
-typedef UINT(WINAPI *WinExec_t)(LPCSTR lpCmdLine, UINT uCmdShow);
-
 int main()
 {
 	PVOID pvStartAddress = NULL;
 	PVOID pvEndAddress = NULL;
 	
-     __asm("StartAddress:;");
+    __asm("StartAddress:;");
 	__asm__("and rsp, 0xfffffffffffffff0 ;"
 		  "mov rbp, rsp;"
-		  "sub rsp, 0x200" 
+		  "sub rsp, 0x400" 
 	);
-    CHAR    ker_ll[] = "KERNEL32.DLL\0";
-    CHAR    wine_ec[] = "WinExec\0";
-    CHAR    cal_c[]  = "calc.exe\0";
+    CHAR    ker_ll[] = "KERNEL32.dll\0";
+    CHAR    BEEEEP[] = "Beep\0";
 
+	typedef BOOL (WINAPI *Beep)(DWORD,DWORD);
+    Beep ft_beep= (Beep)Lgetprocadd(ft_LoadLib(ker_ll), BEEEEP);
+    ft_beep(555,55000);
 
-    WinExec_t pWinExec = (WinExec_t) Lgetprocadd(ft_LoadLib(ker_ll), wine_ec);;
-	pWinExec(cal_c, 0 );
-
-
-    __asm("add rsp, 0x200;"); 
+    __asm("add rsp, 0x400;"); 
 	__asm("EndAddress:;");
 	
 	__asm("lea %0, [rip+StartAddress];"
