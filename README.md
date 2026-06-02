@@ -1,54 +1,103 @@
-Windows Dynamic API Resolver (PoC)
-A research-oriented implementation of manual Portable Executable (PE) parsing, demonstrating dynamic API resolution at runtime without reliance on the Windows Loader (kernel32.dll imports).
+# Shellcode Extractor
 
-Overview
-This project explores the mechanics of Windows process memory and the Windows Loader. By bypassing standard library linking and resolving functions directly from the Process Environment Block (PEB), this utility demonstrates how a process can locate and execute arbitrary Windows APIs from memory.
+A Windows x86-64 shellcode development utility that resolves API functions at runtime without relying on the Import Address Table (IAT), then extracts the resulting shellcode bytes from the compiled binary.
 
-Key Technical Concepts
-PEB Traversal: Direct access to the GS segment register to locate the PEB structure.
+---
 
-Memory Parsing: Manual iteration through the LDR_DATA_TABLE_ENTRY structures to identify loaded modules (KERNEL32.dll).
+## Overview
 
-Export Address Table (EAT) Analysis: Parsing the IMAGE_EXPORT_DIRECTORY to extract function addresses by name without using GetProcAddress.
+This tool demonstrates a self-contained shellcode stub that:
 
-Position Independent Code (PIC): Development of self-contained code patterns for in-memory execution.
+- Walks the **Process Environment Block (PEB)** to locate loaded modules without calling `LoadLibrary`
+- Parses the **PE export directory** manually to resolve function addresses without calling `GetProcAddress`
+- Executes a target function (`Beep`) entirely through dynamic resolution
+- Prints the raw shellcode bytes between labeled assembly landmarks so you can copy them directly
 
-Technical Architecture
-The project is built on three core pillars of Windows Internals:
+---
 
-Environment Inspection: The ft_LoadLib function queries the PEB to walk the InMemoryOrderModuleList. This allows the program to dynamically find the base address of any loaded DLL in the current process space.
+## Files
 
-Symbol Resolution: The Lgetprocadd function performs a manual lookup of the Export Address Table. It parses the AddressOfNames, AddressOfNameOrdinals, and AddressOfFunctions arrays to resolve the absolute address of specific exported functions (e.g., Beep).
+| File | Description |
+|---|---|
+| `shellcode.c` | Main source — PEB walker, export resolver, shellcode stub, and byte extractor |
+| `shellcode.h` | Type definitions for `PEB`, `PEB_LDR_DATA`, `LDR_DATA_TABLE_ENTRY`, and `UNICODE_STRING` |
 
-In-Memory Serialization: The main function demonstrates how to calculate the memory boundaries of the functional code, allowing the program to output its own machine code as a byte array.
+---
 
-Usage
-Compilation
-The project utilizes x86_64-w64-mingw32-gcc. Ensure you are using the provided header (shellcode.h) which contains the necessary structure definitions.
+## How It Works
 
-Bash
+### 1. `ft_LoadLib` — PEB-based module lookup
+
+Reads the PEB from `gs:[0x60]` (x86-64 TEB offset), then walks the `InMemoryOrderModuleList` doubly-linked list to find a loaded DLL by name, returning its base address. No calls to `LoadLibrary` or any other import.
+
+### 2. `Lgetprocadd` — PE export table resolver
+
+Given a module base address, it manually parses:
+
+- `IMAGE_DOS_HEADER` → `e_lfanew`
+- `IMAGE_OPTIONAL_HEADER` → `DataDirectory[0]` (export directory RVA)
+- `IMAGE_EXPORT_DIRECTORY` → `AddressOfNames`, `AddressOfNameOrdinals`, `AddressOfFunctions`
+
+It walks the name table comparing against the requested function name and returns the resolved function pointer.
+
+### 3. Shellcode stub extraction
+
+Assembly labels `StartAddress` and `EndAddress` bracket the stub. After execution, the program computes `EndAddress - StartAddress` and prints each byte as `\xNN`, ready to paste into a payload array.
+
+---
+
+## Build
+
+Requires the MinGW-w64 cross-compiler targeting Windows x86-64.
+
+```bash
 x86_64-w64-mingw32-gcc shellcode.c -O -masm=intel -o shellcode.exe -Wno-int-conversion
-Execution
-Running the compiled executable will:
+```
 
-Resolve the address of Beep from KERNEL32.dll at runtime.
+| Flag | Purpose |
+|---|---|
+| `-O` | Basic optimization (keeps inlined functions inlined) |
+| `-masm=intel` | Use Intel syntax for inline assembly |
+| `-Wno-int-conversion` | Suppress pointer/integer cast warnings common in low-level PE parsing |
 
-Execute the Beep function to verify successful resolution.
+---
 
-Calculate and print the hex-encoded byte array of the logic, demonstrating the capability for position-independent execution.
+## Usage
 
-Security Research Context
-This implementation is designed for educational purposes in the field of cybersecurity research. Understanding these techniques is critical for:
+Run the compiled binary on a Windows x86-64 machine:
 
-EDR Development: Improving heuristic detection of dynamic API resolution and memory-resident threats.
+```
+shellcode.exe
+```
 
-Malware Analysis: Analyzing how sophisticated threats hide their import tables to evade static analysis.
+Example output:
 
-Systems Programming: Deepening understanding of the Windows OS architecture and the transition between user-mode and kernel-mode.
+```
+Start address: 0x00007FF6ABCD1000
+End address:   0x00007FF6ABCD10A3
+UCHAR payload[] = {\x48\x83\xe4\xf0\x48\x89\xe5...};
+```
 
-Future Development
-Direct Syscall Implementation: Transitioning from resolving Win32 APIs to invoking Nt* functions directly via the syscall instruction to further reduce the process footprint.
+Copy the `payload[]` line into your loader or injector.
 
-Hash-Based Resolution: Replacing string-based function name comparison with CRC32 or DJB2 hashing to further obfuscate the intent of the API calls.
+---
 
-Disclaimer: This project is for educational use only. The author is not responsible for any misuse of the techniques demonstrated.
+## Key Design Decisions
+
+- All helper functions are declared `inline __attribute__((always_inline))` to ensure they compile into the stub body rather than as separate callable functions (which would require a working call stack and relocated addresses).
+- Stack alignment is explicitly enforced (`and rsp, 0xfffffffffffffff0`) and a shadow space is allocated (`sub rsp, 0x400`) before any Win64 ABI calls.
+- String literals for module and function names are declared as local `CHAR` arrays so they live on the stack inside the stub, avoiding absolute data section references.
+
+---
+
+## Requirements
+
+- **Build host:** Linux or Windows with `x86_64-w64-mingw32-gcc` installed
+- **Execution target:** Windows x86-64
+- **Dependencies:** None — the shellcode stub has no imports by design
+
+---
+
+## Disclaimer
+
+This code is intended for **educational purposes**, **CTF challenges**, and **authorized security research** only. Do not use on systems you do not own or have explicit permission to test.
