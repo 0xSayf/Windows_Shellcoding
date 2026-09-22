@@ -72,13 +72,19 @@ int main()
 		  "mov rbp, rsp;"
 		  "sub rsp, 0x400" 
 	);
-    CHAR    ker_ll[] = "KERNEL32.dll\0";
-    CHAR    BEEEEP[] = "Beep\0";
+    CHAR    ker_ll[] = "ntdll.dll\0";
+    CHAR    BEEEEP[] = "NtDisplayString\0";
 
-	typedef BOOL (WINAPI *Beep)(DWORD,DWORD);
-    Beep ft_beep= (Beep)Lgetprocadd(ft_LoadLib(ker_ll), BEEEEP);
-    ft_beep(550,550);
+	// typedef NTSTATUS (NTAPI *NtDisplayString_t)(PCUNICODE_STRING);
+    NtDisplayString_t ft_display = (NtDisplayString_t)Lgetprocadd(ft_LoadLib(ker_ll), BEEEEP);
+    UNICODE_STRING str = {
+    .Length = 7 * sizeof(WCHAR),
+    .MaximumLength = 8 * sizeof(WCHAR),
+    .Buffer = L"haaaaaa"
+    };
 
+    NTSTATUS status = ft_display(&str);
+    
     __asm("add rsp, 0x400;"); 
 	__asm("EndAddress:;");
 	

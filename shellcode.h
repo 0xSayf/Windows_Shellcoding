@@ -4,11 +4,19 @@
 #include <stdio.h>
 #include <windows.h>
 
+
+
 typedef struct _UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
-    PWSTR  Buffer;
-} UNICODE_STRING, * PUNICODE_STRING;
+    PWSTR Buffer;
+} UNICODE_STRING, *PUNICODE_STRING;
+
+typedef const UNICODE_STRING *PCUNICODE_STRING;
+
+typedef LONG NTSTATUS;
+
+typedef NTSTATUS (*NtDisplayString_t)(PCUNICODE_STRING);
 
 typedef struct _LDR_DATA_TABLE_ENTRY {
     LIST_ENTRY InLoadOrderLinks;
